@@ -26,7 +26,6 @@ const getRouteDisplayName = (route: Route): string => {
         case 'vespucci': return 'Amerigo Vespucci (1499–1502)';
         case 'cortez': return 'Cortés';
         case 'pizarro': return 'Pizarro';
-        case 'tordesillas': return 'Tordesillasi szerződés';
         default: return route.explorer;
     }
 };
@@ -55,7 +54,6 @@ const LayerToggle: React.FC<LayerToggleProps> = ({
         <div className="space-y-1">
           {routes.map(route => {
             const isVisible = visibleRouteIds.includes(route.id);
-            const isSelectable = route.id !== 'tordesillas';
             return (
               <div key={route.id} className={`flex items-center p-1 rounded-md transition-opacity duration-200 ${isVisible ? 'opacity-100' : 'opacity-60 hover:opacity-100'}`}>
                 <input
@@ -73,8 +71,8 @@ const LayerToggle: React.FC<LayerToggleProps> = ({
                   />
                 </svg>
                 <span 
-                  className={`text-sm text-gray-700 ${isSelectable ? 'cursor-pointer hover:text-blue-600 hover:underline' : ''}`}
-                  onClick={isSelectable ? () => onExplorerSelect(route.id) : undefined}
+                  className="text-sm text-gray-700 cursor-pointer hover:text-blue-600 hover:underline"
+                  onClick={() => onExplorerSelect(route.id)}
                 >
                   {getRouteDisplayName(route)}
                 </span>

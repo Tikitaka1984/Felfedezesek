@@ -2,7 +2,7 @@
 import React, { useRef, useEffect, useState } from 'react';
 import * as d3 from 'd3';
 import * as topojson from 'topojson-client';
-import { routes, cities, empires, territories, continents, oceans } from '../data/mapData';
+import { routes, cities, empires, territories, continents, oceans, EMPIRE_COLORS, EMPIRE_STROKE_COLORS } from '../data/mapData';
 import type { Route, City, Empire, Continent, Coordinates } from '../types';
 
 interface MapProps {
@@ -93,16 +93,16 @@ const Map: React.FC<MapProps> = ({ worldData, onExplorerSelect, onEmpireClick, v
       .join('path')
       .attr('fill', (d: any) => {
         if (!showTerritories) return '#f0e6c2';
-        const territory = territories.find(t => t.countryCodes.includes(d.properties.name));
-        return territory ? territory.color : '#f0e6c2';
+        const territory = territories.find(t => t.countryNames.includes(d.properties.name));
+        return territory ? (EMPIRE_COLORS[territory.id] || '#f0e6c2') : '#f0e6c2';
       })
       .attr('stroke', (d: any) => {
         if (!showTerritories) return '#888';
-        const territory = territories.find(t => t.countryCodes.includes(d.properties.name));
-        return territory ? territory.strokeColor : '#ccc';
+        const territory = territories.find(t => t.countryNames.includes(d.properties.name));
+        return territory ? (EMPIRE_STROKE_COLORS[territory.id] || '#ccc') : '#ccc';
       })
       .attr('stroke-width', (d: any) => {
-         const territory = territories.find(t => t.countryCodes.includes(d.properties.name));
+         const territory = territories.find(t => t.countryNames.includes(d.properties.name));
          return showTerritories && territory ? 0.8 : 0.5;
       });
 
@@ -114,11 +114,9 @@ const Map: React.FC<MapProps> = ({ worldData, onExplorerSelect, onEmpireClick, v
       .data(visibleRoutes, (d: Route) => d.id)
       .join('g')
         .attr('class', 'route-container')
-        .style('cursor', (d) => d.id === 'tordesillas' ? 'default' : 'pointer')
+        .style('cursor', 'pointer')
         .on('click', (_, d) => {
-          if (d.id !== 'tordesillas') {
-            onExplorerSelect(d.id);
-          }
+          onExplorerSelect(d.id);
         });
 
     routeContainers.selectAll('path.route-path')

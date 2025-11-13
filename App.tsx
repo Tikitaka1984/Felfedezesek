@@ -1,12 +1,12 @@
 
 import React, { useState, useEffect } from 'react';
 import Map from './components/Map';
-import Legend from './components/Legend';
 import LayerToggle from './components/LayerToggle';
 import Tooltip from './components/Tooltip';
 import EducationalPanel from './components/EducationalPanel';
-import { routes, territories } from './data/mapData';
+import { routes } from './data/mapData';
 import type { Empire } from './types';
+import ColonialLegend from './components/ColonialLegend';
 
 const App: React.FC = () => {
   const [worldData, setWorldData] = useState<any>(null);
@@ -80,11 +80,7 @@ const App: React.FC = () => {
         showEmpires={showEmpires}
       />
       
-      <div className="absolute top-4 left-4 z-10">
-        <Legend
-          territories={territories}
-        />
-      </div>
+      <ColonialLegend />
 
       <EducationalPanel selectedExplorerId={selectedExplorerId} onClose={handleCloseEducationalPanel} />
       

@@ -1,4 +1,21 @@
-import type { Route, City, Empire, Territory, Coordinates, Continent } from '../types';
+import type { Route, City, Empire, Territory, Coordinates, Continent, EmpireId } from '../types';
+
+export const EMPIRE_COLORS: Record<EmpireId, string> = {
+    spain: 'rgba(255, 153, 153, 0.6)',
+    portugal: 'rgba(153, 179, 255, 0.6)',
+    england: 'rgba(153, 230, 153, 0.6)',
+    france: 'rgba(201, 163, 255, 0.6)',
+    netherlands: 'rgba(255, 204, 153, 0.6)',
+};
+
+export const EMPIRE_STROKE_COLORS: Record<EmpireId, string> = {
+    spain: '#d12e2e',
+    portugal: '#3662d9',
+    england: '#2d8f2d',
+    france: '#8a4ddb',
+    netherlands: '#e0861e',
+};
+
 
 export const routes: Route[] = [
   {
@@ -203,7 +220,7 @@ export const routes: Route[] = [
   },
   {
     id: 'tordesillas',
-    explorer: 'Tordesillasi szerződés',
+    explorer: 'Tordesillasi szerződés (1494)',
     year: '1494',
     path: [[-46.6, 60], [-46.6, -60]],
     color: '#8B0000', // Dark Red
@@ -238,11 +255,11 @@ export const empires: Empire[] = [
 ];
 
 export const territories: Territory[] = [
-    { name: 'Spanyol', power: 'Spanyolország', color: 'rgba(255, 153, 153, 0.5)', strokeColor: '#d12e2e', countryCodes: ['MEX', 'GTM', 'HND', 'SLV', 'NIC', 'CRI', 'PAN', 'COL', 'VEN', 'ECU', 'PER', 'BOL', 'CHL', 'ARG', 'PRY', 'URY', 'CUB', 'DOM', 'PRI'] },
-    { name: 'Portugál', power: 'Portugália', color: 'rgba(153, 179, 255, 0.5)', strokeColor: '#3662d9', countryCodes: ['BRA', 'AGO', 'MOZ'] },
-    { name: 'Angol', power: 'Anglia', color: 'rgba(153, 230, 153, 0.5)', strokeColor: '#2d8f2d', countryCodes: ['USA', 'CAN'] }, // Early settlements
-    { name: 'Francia', power: 'Franciaország', color: 'rgba(201, 163, 255, 0.5)', strokeColor: '#8a4ddb', countryCodes: ['CAN'] }, // Early explorations
-    { name: 'Holland', power: 'Hollandia', color: 'rgba(255, 204, 153, 0.5)', strokeColor: '#e0861e', countryCodes: ['IDN', 'SUR'] }
+    { id: 'spain', name: 'Spanyol', power: 'Spanyolország', countryNames: ['Mexico', 'Guatemala', 'Honduras', 'El Salvador', 'Nicaragua', 'Costa Rica', 'Panama', 'Colombia', 'Venezuela', 'Ecuador', 'Peru', 'Bolivia', 'Chile', 'Argentina', 'Paraguay', 'Uruguay', 'Cuba', 'Dominican Rep.', 'Puerto Rico'] },
+    { id: 'portugal', name: 'Portugál', power: 'Portugália', countryNames: ['Brazil', 'Angola', 'Mozambique'] },
+    { id: 'england', name: 'Angol', power: 'Anglia', countryNames: ['United States of America', 'Canada'] }, // Early settlements
+    { id: 'france', name: 'Francia', power: 'Franciaország', countryNames: ['Canada'] }, // Early explorations
+    { id: 'netherlands', name: 'Holland', power: 'Hollandia', countryNames: ['Indonesia', 'Suriname'] }
 ];
 
 export const continents: Continent[] = [

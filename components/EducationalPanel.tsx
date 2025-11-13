@@ -78,6 +78,15 @@ const explorerInfo: { [key: string]: { name: string; description: string; signif
       'A térség társadalmi, etnikai és vallási viszonyai gyökeresen átalakultak.',
     ],
   },
+  tordesillas: {
+    name: 'Tordesillasi szerződés (1494)',
+    description: '1494-ben Spanyolország és Portugália pápai közvetítéssel megkötötte a tordesillasi szerződést, amely az Atlanti-óceánon húzódó képzeletbeli választóvonal mentén felosztotta a frissen felfedezett területek gyarmatosítási jogát.',
+    significance: [
+      'A választóvonal nagyjából a mai Brazília keleti partvidéke mellett húzódott, így Portugáliához került Brazília területe.',
+      'A spanyol és portugál gyarmatbirodalmak határai hosszú időre rögzültek, meghatározva Latin-Amerika kulturális és nyelvi arculatát.',
+      'A szerződés jól mutatja, hogy a földrajzi felfedezések mögött hatalmi és geopolitikai érdekek is álltak, amelyeket diplomáciai eszközökkel próbáltak rendezni.'
+    ]
+  },
 };
 
 const ExplorerContent: React.FC<{ info: { name: string; description: string; significance: string[] } }> = ({ info }) => (

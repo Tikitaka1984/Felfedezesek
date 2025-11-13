@@ -1,5 +1,7 @@
 export type Coordinates = [number, number];
 
+export type EmpireId = 'spain' | 'portugal' | 'england' | 'france' | 'netherlands';
+
 export interface Route {
   id: string;
   explorer: string;
@@ -28,11 +30,10 @@ export interface Empire {
 }
 
 export interface Territory {
+    id: EmpireId;
     name: string;
     power: string;
-    color: string;
-    strokeColor: string;
-    countryCodes: string[]; // ISO 3166-1 alpha-3 codes
+    countryNames: string[]; // Full country names from world-atlas
 }
 
 export interface Continent {
