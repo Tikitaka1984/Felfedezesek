@@ -15,12 +15,34 @@ interface MapProps {
   is3DView: boolean;
   showCities: boolean;
   showEmpires: boolean;
+  currentYear: number;
 }
 
-const Map: React.FC<MapProps> = ({ worldData, onExplorerSelect, onEmpireClick, visibleRouteIds, showTerritories, selectedExplorerId, is3DView, showCities, showEmpires }) => {
+// Helper to parse route years
+const getRouteYearRange = (yearStr: string) => {
+  const parts = yearStr.split('-').map(s => parseInt(s.trim()));
+  return {
+    start: parts[0],
+    end: parts.length > 1 ? parts[1] : parts[0]
+  };
+};
+
+const Map: React.FC<MapProps> = ({ 
+  worldData, 
+  onExplorerSelect, 
+  onEmpireClick, 
+  visibleRouteIds, 
+  showTerritories, 
+  selectedExplorerId, 
+  is3DView, 
+  showCities, 
+  showEmpires,
+  currentYear
+}) => {
   const svgRef = useRef<SVGSVGElement | null>(null);
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
-  const animationTimer = useRef<d3.Timer | null>(null);
+  // We don't need a complex D3 timer for the timeline, we react to props,
+  // but for smooth rotation or internal animations, we might keep refs.
 
   useEffect(() => {
     const updateDimensions = () => {
@@ -37,11 +59,6 @@ const Map: React.FC<MapProps> = ({ worldData, onExplorerSelect, onEmpireClick, v
   }, []);
 
   useEffect(() => {
-    // Stop any previous animation timer when the component re-renders
-    if (animationTimer.current) {
-      animationTimer.current.stop();
-    }
-
     if (!worldData || !svgRef.current || dimensions.width === 0) return;
 
     const { width, height } = dimensions;
@@ -93,6 +110,8 @@ const Map: React.FC<MapProps> = ({ worldData, onExplorerSelect, onEmpireClick, v
       .join('path')
       .attr('fill', (d: any) => {
         if (!showTerritories) return '#f0e6c2';
+        // Only show territories relevant to the current year? 
+        // For simplicity, we keep the general territory map but could animate expansion in a v2.
         const territory = territories.find(t => t.countryNames.includes(d.properties.name));
         return territory ? (EMPIRE_COLORS[territory.id] || '#f0e6c2') : '#f0e6c2';
       })
@@ -106,6 +125,11 @@ const Map: React.FC<MapProps> = ({ worldData, onExplorerSelect, onEmpireClick, v
          return showTerritories && territory ? 0.8 : 0.5;
       });
 
+    // -----------------------------------------------------------------------
+    // Route Logic
+    // -----------------------------------------------------------------------
+    
+    // Only render routes that are checked in the sidebar
     const visibleRoutes = routes.filter(r => visibleRouteIds.includes(r.id));
     
     const routeContainers = g.append('g')
@@ -119,98 +143,130 @@ const Map: React.FC<MapProps> = ({ worldData, onExplorerSelect, onEmpireClick, v
           onExplorerSelect(d.id);
         });
 
-    routeContainers.selectAll('path.route-path')
-      .data((route: Route) => {
-        const isMultiSegment = Array.isArray(route.path[0]?.[0]);
-        return isMultiSegment ? (route.path as Coordinates[][]) : [route.path as Coordinates[]];
-      })
-      .join('path')
-      .attr('class', 'route-path')
-      .attr('stroke', function() {
-        const routeData = d3.select(this.parentNode as SVGGElement).datum() as Route;
-        return routeData.color;
-      })
-      .attr('fill', 'none')
-      .attr('stroke-width', function() {
-        const routeData = d3.select(this.parentNode as SVGGElement).datum() as Route;
-        return selectedExplorerId === routeData.id ? 4 : (routeData.id === 'tordesillas' ? 2.5 : 2);
-      })
-      .attr('stroke-dasharray', function() {
-        const routeData = d3.select(this.parentNode as SVGGElement).datum() as Route;
-        if (routeData.id === 'tordesillas') return '6,6';
-        return routeData.type === 'dashed' ? '8, 8' : routeData.type === 'dotted' ? '2, 6' : 'none';
-      });
+    // Render paths
+    routeContainers.each(function(d: Route) {
+        const container = d3.select(this);
+        const { start, end } = getRouteYearRange(d.year);
+        
+        // Determine visibility and progress based on currentYear
+        let opacity = 0.1; // Default: barely visible (future/past inactive)
+        let progress = 0;  // 0 to 1
+        let shipVisible = false;
 
-    if (selectedExplorerId) {
-      const selectedRouteData = routes.find(r => r.id === selectedExplorerId);
-      
-      if (selectedRouteData && selectedRouteData.path.length > 1) {
-        const isMultiSegment = Array.isArray(selectedRouteData.path[0]?.[0]);
-        const fullPathCoords = (isMultiSegment 
-            ? (selectedRouteData.path as Coordinates[][]).flat() 
-            : selectedRouteData.path as Coordinates[]
-        ).filter(p => p && p.length === 2);
-
-        if (fullPathCoords.length > 1) {
-          const segments = d3.pairs(fullPathCoords);
-          const segmentLengths = segments.map(([a, b]) => d3.geoDistance(a, b));
-          const cumulativeLengths: number[] = [0];
-          let currentLength = 0;
-          for(const len of segmentLengths) {
-              currentLength += len;
-              cumulativeLengths.push(currentLength);
-          }
-          const totalGeoLength = cumulativeLengths[cumulativeLengths.length - 1];
-          
-          if (totalGeoLength > 0) {
-            const ship = g.append('text')
-                .attr('class', 'ship-marker')
-                .text('🚢')
-                .attr('font-size', is3DView ? '20px' : '16px')
-                .attr('text-anchor', 'middle')
-                .attr('dy', '.35em')
-                .style('paint-order', 'stroke')
-                .attr('stroke', 'white')
-                .attr('stroke-width', '2px')
-                .attr('stroke-linejoin', 'round');
-                
-            const duration = 20000; // 20 seconds for the whole trip
-
-            animationTimer.current = d3.timer(function(elapsed) {
-                const t = (elapsed % duration) / duration;
-                const targetDist = t * totalGeoLength;
-
-                const segmentIndex = d3.bisect(cumulativeLengths, targetDist) - 1;
-                
-                if(segmentIndex < 0) return;
-
-                const distIntoSegment = targetDist - cumulativeLengths[segmentIndex];
-                const segmentFraction = segmentLengths[segmentIndex] > 0 ? (distIntoSegment / segmentLengths[segmentIndex]) : 0;
-                
-                const p0 = fullPathCoords[segmentIndex];
-                const p1 = fullPathCoords[segmentIndex + 1];
-
-                if (!p0 || !p1) return;
-
-                const interpolator = d3.geoInterpolate(p0, p1);
-                const currentGeoCoords = interpolator(segmentFraction);
-                
-                const screenPos = projection(currentGeoCoords);
-
-                if (screenPos) {
-                    const rotation = projection.rotate ? projection.rotate() : [0,0,0];
-                    const isVisible = !is3DView || d3.geoDistance(currentGeoCoords, [-rotation[0], -rotation[1]]) < Math.PI / 2;
-                    ship
-                        .attr('transform', `translate(${screenPos[0]}, ${screenPos[1]})`)
-                        .style('display', isVisible ? 'block' : 'none');
-                } else {
-                    ship.style('display', 'none');
-                }
-            });
-          }
+        if (currentYear < start) {
+            // Future route
+            opacity = 0; 
+        } else if (currentYear > end) {
+            // Past completed route
+            opacity = 0.5;
+            progress = 1;
+        } else {
+            // Active route
+            opacity = 1;
+            shipVisible = true;
+            const duration = end - start;
+            // If duration is 0 (single year event), show progress as 100% or oscillating?
+            // Let's treat it as 50% done in that year or fully done.
+            progress = duration === 0 ? 0.9 : (currentYear - start) / duration;
+            // Smooth out slightly or clamp
+            progress = Math.min(Math.max(progress, 0), 1);
         }
-      }
-    }
+
+        // If a specific explorer is selected manually, we override the timeline visibility to show it fully
+        if (selectedExplorerId === d.id) {
+            opacity = 1;
+            progress = 1; // Show full path
+            shipVisible = false; // We might disable the timeline ship for the selected "Highlight" view, or keep it.
+            // Note: In this implementation, let's let the timeline drive the ship, but selection drives opacity.
+        }
+
+        // Prepare path data
+        const isMultiSegment = Array.isArray(d.path[0]?.[0]);
+        const pathSegments = isMultiSegment ? (d.path as Coordinates[][]) : [d.path as Coordinates[]];
+
+        // Draw the static path (the trail)
+        container.selectAll('path.route-path')
+            .data(pathSegments)
+            .join('path')
+            .attr('class', 'route-path')
+            .attr('stroke', d.color)
+            .attr('fill', 'none')
+            .attr('stroke-width', selectedExplorerId === d.id ? 4 : (d.id === 'tordesillas' ? 2.5 : 2))
+            .attr('stroke-dasharray', () => {
+                if (d.id === 'tordesillas') return '6,6';
+                return d.type === 'dashed' ? '8, 8' : d.type === 'dotted' ? '2, 6' : 'none';
+            })
+            .attr('opacity', opacity);
+
+        // Draw the ship if active
+        if (shipVisible && progress < 1 && d.id !== 'tordesillas') {
+            // Calculate position along path
+            // Flatten path for distance calc
+            const flatCoords = (isMultiSegment ? (d.path as Coordinates[][]).flat() : d.path as Coordinates[]).filter(c => c.length === 2);
+            
+            if (flatCoords.length > 1) {
+                const segments = d3.pairs(flatCoords);
+                const segmentLengths = segments.map(([a, b]) => d3.geoDistance(a, b));
+                const totalLength = d3.sum(segmentLengths);
+                
+                const targetDist = totalLength * progress;
+                
+                // Find which segment the targetDist falls into
+                let currentDist = 0;
+                let foundP0 = flatCoords[0];
+                let foundP1 = flatCoords[1];
+                let segmentFraction = 0;
+
+                for (let i = 0; i < segmentLengths.length; i++) {
+                    if (currentDist + segmentLengths[i] >= targetDist) {
+                        foundP0 = flatCoords[i];
+                        foundP1 = flatCoords[i+1];
+                        const distInSegment = targetDist - currentDist;
+                        segmentFraction = distInSegment / segmentLengths[i];
+                        break;
+                    }
+                    currentDist += segmentLengths[i];
+                }
+
+                if (foundP0 && foundP1) {
+                    const interpolator = d3.geoInterpolate(foundP0, foundP1);
+                    const currentGeoCoords = interpolator(segmentFraction);
+                    
+                    // Append Ship Group
+                    // Use a unique class/id to select and update later? 
+                    // Since we redraw on render, we append anew.
+                    const shipGroup = container.append('g').attr('class', 'ship-group');
+                    
+                    // Store coordinates for updatePositions
+                    (shipGroup.node() as any).__geoCoords = currentGeoCoords;
+
+                    shipGroup.append('text')
+                        .text('🚢')
+                        .attr('font-size', is3DView ? '24px' : '20px')
+                        .attr('text-anchor', 'middle')
+                        .attr('dy', '.35em')
+                        .style('paint-order', 'stroke')
+                        .attr('stroke', 'white')
+                        .attr('stroke-width', '2px')
+                        .attr('stroke-linejoin', 'round');
+                        
+                    // Add explorer name label near ship
+                    shipGroup.append('text')
+                        .text(d.explorer.split(' ')[0]) // Short name
+                        .attr('y', -15)
+                        .attr('text-anchor', 'middle')
+                        .attr('font-size', '10px')
+                        .attr('fill', '#333')
+                        .attr('font-weight', 'bold')
+                        .style('text-shadow', '0px 0px 4px white');
+                }
+            }
+        }
+    });
+
+    // -----------------------------------------------------------------------
+    // Labels & Markers
+    // -----------------------------------------------------------------------
 
     labelsGroup.append('g').attr('class', 'city-markers')
       .style('display', showCities ? 'block' : 'none')
@@ -262,6 +318,10 @@ const Map: React.FC<MapProps> = ({ worldData, onExplorerSelect, onEmpireClick, v
       .style('letter-spacing', d => d.type === 'continent' ? '1px' : 'normal')
       .style('paint-order', 'stroke').attr('stroke', 'white').attr('stroke-width', '3px').attr('stroke-linejoin', 'round');
 
+    // -----------------------------------------------------------------------
+    // Position Update Logic (Rotation/Zoom)
+    // -----------------------------------------------------------------------
+
     function updatePositions() {
       const currentG = d3.select(svgRef.current).select<SVGGElement>('g.map-content');
       const currentLabels = d3.select(svgRef.current).select<SVGGElement>('g.labels');
@@ -271,24 +331,40 @@ const Map: React.FC<MapProps> = ({ worldData, onExplorerSelect, onEmpireClick, v
       currentG.selectAll('.sphere, .landmass path').attr('d', pathGenerator);
       currentG.selectAll('path.route-path').attr('d', segment => lineGenerator(segment as any));
       
+      // Update Ship positions
+      currentG.selectAll('g.ship-group').attr('transform', function() {
+          const coords = (this as any).__geoCoords;
+          if (!coords) return '';
+          const pos = projection(coords);
+          if (!pos) return '';
+          return `translate(${pos[0]}, ${pos[1]})`;
+      });
+      
+      // Visibility on Globe check
       const rotation = projection.rotate ? projection.rotate() : [0, 0, 0];
-      const isVisibleOnGlobe = (d: { coords: [number, number] }) => 
-        !is3DView || d3.geoDistance(d.coords, [-rotation[0], -rotation[1]]) < Math.PI / 2;
+      const isVisibleOnGlobe = (coords: [number, number]) => 
+        !is3DView || d3.geoDistance(coords, [-rotation[0], -rotation[1]]) < Math.PI / 2;
+
+      // Hide ships on back of globe
+      currentG.selectAll('g.ship-group').style('display', function() {
+          const coords = (this as any).__geoCoords;
+          return (!coords || isVisibleOnGlobe(coords)) ? 'block' : 'none';
+      });
 
       currentLabels.selectAll('.city-markers circle')
           .attr('transform', d => `translate(${projection((d as City).coords)})`)
-          .style('display', d => (showCities && isVisibleOnGlobe(d as City)) ? 'block' : 'none');
+          .style('display', d => (showCities && isVisibleOnGlobe((d as City).coords)) ? 'block' : 'none');
           
       currentLabels.selectAll('.empire-markers rect')
           .attr('transform', d => `translate(${projection((d as Empire).coords)})`)
-          .style('display', d => (showEmpires && isVisibleOnGlobe(d as Empire)) ? 'block' : 'none');
+          .style('display', d => (showEmpires && isVisibleOnGlobe((d as Empire).coords)) ? 'block' : 'none');
 
       currentLabels.selectAll('.text-labels text')
           .attr('x', d => (projection((d as any).coords)?.[0] || 0) + ( (d as any).type === 'city' || (d as any).type === 'empire' ? 8 : 0))
           .attr('y', d => (projection((d as any).coords)?.[1] || 0) + ( (d as any).type === 'city' || (d as any).type === 'empire' ? 4 : 0))
           .attr('transform', d => (d as any).type === 'continent' ? `rotate(${(d as Continent).rotation || 0}, ${projection((d as any).coords)?.[0] || 0}, ${projection((d as any).coords)?.[1] || 0})` : '')
           .style('display', d => {
-              if (!isVisibleOnGlobe(d as any)) return 'none';
+              if (!isVisibleOnGlobe((d as any).coords)) return 'none';
               const type = (d as any).type;
               if (type === 'city' && !showCities) return 'none';
               if (type === 'empire' && !showEmpires) return 'none';
@@ -321,7 +397,7 @@ const Map: React.FC<MapProps> = ({ worldData, onExplorerSelect, onEmpireClick, v
       svg.call(zoom2D);
     }
 
-  }, [worldData, dimensions, onExplorerSelect, onEmpireClick, visibleRouteIds, showTerritories, selectedExplorerId, is3DView, showCities, showEmpires]);
+  }, [worldData, dimensions, onExplorerSelect, onEmpireClick, visibleRouteIds, showTerritories, selectedExplorerId, is3DView, showCities, showEmpires, currentYear]);
 
   return <svg ref={svgRef} className="w-full h-full cursor-grab"></svg>;
 };

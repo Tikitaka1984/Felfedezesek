@@ -7,6 +7,7 @@ import EducationalPanel from './components/EducationalPanel';
 import { routes } from './data/mapData';
 import type { Empire } from './types';
 import ColonialLegend from './components/ColonialLegend';
+import TimelineControls from './components/TimelineControls';
 
 const App: React.FC = () => {
   const [worldData, setWorldData] = useState<any>(null);
@@ -17,6 +18,11 @@ const App: React.FC = () => {
   const [showEmpires, setShowEmpires] = useState(true);
   const [tooltip, setTooltip] = useState<{ data: { name: string; description: string; }, position: { x: number; y: number; } } | null>(null);
   const [selectedExplorerId, setSelectedExplorerId] = useState<string | null>(null);
+  
+  // Timeline state
+  // Default to a year before the main action or the start of the era
+  const [currentYear, setCurrentYear] = useState<number>(1485);
+  const [isPlaying, setIsPlaying] = useState(false);
 
 
   useEffect(() => {
@@ -34,6 +40,7 @@ const App: React.FC = () => {
   const handleExplorerSelect = (explorerId: string) => {
     setTooltip(null);
     setSelectedExplorerId(explorerId);
+    setIsPlaying(false); // Stop timeline if specific explorer is selected manually
   };
   
   const handleEmpireClick = (empire: Empire, event: MouseEvent) => {
@@ -78,6 +85,7 @@ const App: React.FC = () => {
         is3DView={is3DView}
         showCities={showCities}
         showEmpires={showEmpires}
+        currentYear={currentYear}
       />
       
       <ColonialLegend />
@@ -101,6 +109,13 @@ const App: React.FC = () => {
         setShowEmpires={setShowEmpires}
         is3DView={is3DView}
         setIs3DView={setIs3DView}
+      />
+
+      <TimelineControls 
+        currentYear={currentYear} 
+        setCurrentYear={setCurrentYear} 
+        isPlaying={isPlaying}
+        setIsPlaying={setIsPlaying}
       />
     </main>
   );
