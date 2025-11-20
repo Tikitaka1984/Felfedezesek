@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
   <head>
@@ -6,9 +5,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Age of Discovery Interactive Map</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cesium.com/downloads/cesiumjs/releases/1.104/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
+    <script>
+      window.CESIUM_BASE_URL = "https://cesium.com/downloads/cesiumjs/releases/1.104/Build/Cesium/";
+    </script>
     <style>
       body {
         overscroll-behavior: none;
+      }
+      /* Custom scrollbar for Cesium info box if needed, though we mostly use our own */
+      .cesium-viewer-bottom {
+        display: none; /* Hide credit container for cleaner look, or style it minimally */
+      }
+      .cesium-credit-textContainer, .cesium-credit-expand-link, .cesium-credit-image {
+         display: none !important;
       }
     </style>
   <script type="importmap">
@@ -25,6 +35,7 @@
 </head>
   <body class="bg-gray-100">
     <div id="root"></div>
+    <script src="https://cesium.com/downloads/cesiumjs/releases/1.104/Build/Cesium/Cesium.js"></script>
     <script type="module" src="/index.tsx"></script>
   </body>
 </html>

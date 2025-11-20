@@ -1,12 +1,14 @@
 
 import React, { useEffect, useState } from "react";
 import { routes } from "../data/mapData";
+import type { Concept } from "../types";
 
 interface TimelineControlsProps {
   currentYear: number;
   setCurrentYear: React.Dispatch<React.SetStateAction<number>>;
   isPlaying: boolean;
   setIsPlaying: (playing: boolean) => void;
+  onSaveConcept: (concept: Omit<Concept, 'id' | 'createdAt'>) => void;
 }
 
 const TimelineControls: React.FC<TimelineControlsProps> = ({
@@ -14,6 +16,7 @@ const TimelineControls: React.FC<TimelineControlsProps> = ({
   setCurrentYear,
   isPlaying,
   setIsPlaying,
+  onSaveConcept,
 }) => {
   const [speed, setSpeed] = useState(1);
   const minYear = 1485;
@@ -47,8 +50,6 @@ const TimelineControls: React.FC<TimelineControlsProps> = ({
 
   const handleSliderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setCurrentYear(parseInt(e.target.value, 10));
-    // Optional: Pause when dragging slider manually
-    // setIsPlaying(false); 
   };
 
   const togglePlay = () => {
@@ -64,15 +65,39 @@ const TimelineControls: React.FC<TimelineControlsProps> = ({
     else setSpeed(1);
   };
 
+  const handleSaveEvent = () => {
+    const description = activeEvents.length > 0 
+      ? activeEvents.map(e => `${e.explorer} (${e.year})`).join('; ')
+      : 'Ebben az évben nem történt kiemelt esemény a térképen.';
+    
+    onSaveConcept({
+      name: `Események ${currentYear}-ben`,
+      definition: description,
+      category: 'Esemény',
+      year: currentYear,
+    });
+  };
+
   return (
     <div className="absolute bottom-0 left-0 right-0 w-full p-4 z-20 flex justify-center pointer-events-none">
       <div className="bg-white/90 backdrop-blur-md rounded-xl shadow-2xl p-4 w-full max-w-3xl pointer-events-auto border border-gray-200">
         
         {/* Header Info */}
         <div className="flex justify-between items-start mb-4">
-          <div>
-            <div className="text-4xl font-bold text-blue-900 font-serif">{currentYear}</div>
-            <div className="text-xs text-gray-500 uppercase tracking-wider font-semibold">Események</div>
+          <div className="flex items-center gap-3">
+            <div>
+              <div className="text-4xl font-bold text-blue-900 font-serif">{currentYear}</div>
+              <div className="text-xs text-gray-500 uppercase tracking-wider font-semibold">Események</div>
+            </div>
+            <button 
+              onClick={handleSaveEvent}
+              className="p-1.5 bg-blue-50 text-blue-600 rounded hover:bg-blue-100 transition-colors"
+              title="Mentés a fogalom naplóba"
+            >
+               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+               </svg>
+            </button>
           </div>
           
           <div className="flex-1 ml-6 h-16 overflow-y-auto scrollbar-thin">

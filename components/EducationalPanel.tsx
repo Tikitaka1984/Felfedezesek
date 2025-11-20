@@ -1,8 +1,11 @@
+
 import React, { useState } from 'react';
+import type { Concept } from '../types';
 
 interface EducationalPanelProps {
   selectedExplorerId: string | null;
   onClose: () => void;
+  onSaveConcept: (concept: Omit<Concept, 'id' | 'createdAt'>) => void;
 }
 
 const explorerInfo: { [key: string]: { name: string; description: string; significance: string[] } } = {
@@ -84,17 +87,26 @@ const explorerInfo: { [key: string]: { name: string; description: string; signif
     significance: [
       'A választóvonal nagyjából a mai Brazília keleti partvidéke mellett húzódott, így Portugáliához került Brazília területe.',
       'A spanyol és portugál gyarmatbirodalmak határai hosszú időre rögzültek, meghatározva Latin-Amerika kulturális és nyelvi arculatát.',
-      'A szerződés jól mutatja, hogy a földrajzi felfedezések mögött hatalmi és geopolitikai érdekek is álltak, amelyeket diplomáciai eszközökkel próbáltak rendezni.'
+      'A szerződés jól mutatja, hogy a földrajzi felfedezések mögött hatalmi és geopolitikai érdekekek is álltak, amelyeket diplomáciai eszközökkel próbáltak rendezni.'
     ]
   },
 };
 
-const ExplorerContent: React.FC<{ info: { name: string; description: string; significance: string[] } }> = ({ info }) => (
+const ExplorerContent: React.FC<{ info: { name: string; description: string; significance: string[] }; onSave: () => void }> = ({ info, onSave }) => (
     <div className="space-y-4">
-      <div>
+      <div className="flex justify-between items-start">
         <h3 className="text-xl font-bold text-gray-800">{info.name}</h3>
-        <p className="text-sm text-gray-700 mt-2">{info.description}</p>
+        <button 
+          onClick={onSave}
+          className="text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 p-2 rounded transition-colors"
+          title="Mentés a fogalom naplóba"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+          </svg>
+        </button>
       </div>
+      <p className="text-sm text-gray-700 mt-1">{info.description}</p>
       <div>
         <h4 className="font-semibold text-gray-700 mb-2">Jelentősége</h4>
         <ul className="list-disc list-inside text-gray-600 space-y-1 text-sm">
@@ -152,10 +164,21 @@ const ConsequencesContent: React.FC = () => (
 );
 
 
-const EducationalPanel: React.FC<EducationalPanelProps> = ({ selectedExplorerId, onClose }) => {
+const EducationalPanel: React.FC<EducationalPanelProps> = ({ selectedExplorerId, onClose, onSaveConcept }) => {
   const [activeTab, setActiveTab] = useState<'explorers' | 'consequences'>('explorers');
 
   const selectedInfo = selectedExplorerId ? explorerInfo[selectedExplorerId] : null;
+
+  const handleSave = () => {
+    if (selectedInfo) {
+        onSaveConcept({
+            name: selectedInfo.name,
+            definition: selectedInfo.description,
+            category: selectedExplorerId?.includes('tordesillas') ? 'Esemény' : 'Felfedező',
+            year: selectedInfo.name.match(/\d{4}/)?.[0] || ''
+        });
+    }
+  };
 
   if (!selectedExplorerId) {
     return null;
@@ -200,7 +223,7 @@ const EducationalPanel: React.FC<EducationalPanelProps> = ({ selectedExplorerId,
 
       <div className="flex-grow overflow-y-auto pt-4 pr-2">
         {activeTab === 'explorers' && (
-          selectedInfo ? <ExplorerContent info={selectedInfo} /> : <p className="text-gray-600">Válassz ki egy felfedező útvonalát a térképen!</p>
+          selectedInfo ? <ExplorerContent info={selectedInfo} onSave={handleSave} /> : <p className="text-gray-600">Válassz ki egy felfedező útvonalát a térképen!</p>
         )}
         {activeTab === 'consequences' && <ConsequencesContent />}
       </div>
